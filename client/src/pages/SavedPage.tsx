@@ -16,14 +16,11 @@ export default function SavedPage() {
       setLoading(false);
       return;
     }
-
     try {
       const results = await Promise.all(
-        ids.map(id => api.get(`/api/policies/${id}`).then(r => r.data.data).catch(() => null))
+        ids.map(id => api.get('/api/policies/' + id).then(r => r.data.data).catch(() => null))
       );
       setPolicies(results.filter(Boolean));
-    } catch (err) {
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -39,91 +36,111 @@ export default function SavedPage() {
   };
 
   return (
-    <div style={{ padding: '40px 20px' }}>
-      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-        <h2 style={{ fontSize: '32px', color: '#1F1A14', marginTop: 0, fontWeight: 500 }}>
-          관심 <span style={{ color: '#C85A3C', fontStyle: 'italic' }}>정책</span>
-        </h2>
-        <p style={{ color: '#4A4136', marginTop: '8px', marginBottom: '32px', fontSize: '14px' }}>
-          저장한 정책 {policies.length}건
-        </p>
+    <div style={{ padding: '48px 20px' }}>
+      <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+        <div style={{ marginBottom: 32 }}>
+          <div style={eyebrow}>저장한 혜택 모음</div>
+          <h1 style={title}>관심 정책</h1>
+          <p style={meta}>
+            저장한 정책 <strong style={{ color: '#1F1A14', fontWeight: 600 }}>{policies.length}건</strong>
+          </p>
+        </div>
 
-        {loading && <div style={{ padding: '40px', textAlign: 'center' }}>불러오는 중...</div>}
-
-        {!loading && policies.length === 0 && (
-          <div style={{ padding: '100px 20px', textAlign: 'center' }}>
-            <div style={{ fontSize: '48px', color: '#D9CDB6', marginBottom: '16px' }}>♡</div>
-            <h3 style={{ fontSize: '20px', color: '#1F1A14', marginBottom: '12px', fontWeight: 500 }}>
-              아직 저장한 정책이 없어요
-            </h3>
-            <p style={{ fontSize: '14px', color: '#4A4136', marginBottom: '24px' }}>
-              관심 있는 정책의 ♡를 눌러 저장해보세요.
-            </p>
-            <button
-              onClick={() => navigate('/search')}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: '#1F1A14',
-                color: '#F5F0E6',
-                border: 'none',
-                borderRadius: '999px',
-                fontSize: '14px',
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-              }}
-            >
-              내 혜택 찾기 →
+        {loading ? (
+          <div style={loadingStyle}>불러오는 중...</div>
+        ) : policies.length === 0 ? (
+          <div style={emptyStyle}>
+            <div style={{ fontSize: 48, color: '#D9CDB6', marginBottom: 16 }}>♡</div>
+            <h3 style={emptyTitle}>아직 저장한 정책이 없어요</h3>
+            <p style={emptyText}>관심 있는 정책의 ♡를 눌러 저장해보세요.</p>
+            <button onClick={() => navigate('/search')} style={btnPrimary}>
+              내 혜택 찾기
             </button>
           </div>
-        )}
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {policies.map(p => (
-            <div
-              key={p.ID}
-              style={{
-                backgroundColor: '#FBF8F1',
-                border: '1px solid #D9CDB6',
-                borderRadius: '18px',
-                padding: '20px 24px',
-                display: 'grid',
-                gridTemplateColumns: '1fr 50px',
-                gap: '20px',
-                alignItems: 'center',
-              }}
-            >
-              <div
-                onClick={() => navigate(`/policy/${p.ID}`)}
-                style={{ cursor: 'pointer' }}
-              >
-                <div style={{ fontSize: '11px', color: '#C85A3C', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px', fontWeight: 500 }}>
-                  {p.CATEGORY}
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {policies.map(p => (
+              <div key={p.ID} style={cardStyle}>
+                <div onClick={() => navigate('/policy/' + p.ID)} style={{ cursor: 'pointer' }}>
+                  <div style={cardCategory}>{p.CATEGORY}</div>
+                  <h4 style={cardTitle}>{p.TITLE}</h4>
+                  <div style={cardOrg}>{p.ORG}</div>
                 </div>
-                <h4 style={{ margin: 0, fontSize: '18px', color: '#1F1A14', fontWeight: 500, marginBottom: '6px' }}>
-                  {p.TITLE}
-                </h4>
-                <div style={{ fontSize: '13px', color: '#4A4136' }}>{p.ORG}</div>
+                <button onClick={() => handleUnsave(p.ID)} style={btnHeart}>♡</button>
               </div>
-              <button
-                onClick={() => handleUnsave(p.ID)}
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '50%',
-                  border: '1px solid #C85A3C',
-                  backgroundColor: '#C85A3C',
-                  color: '#F5F0E6',
-                  cursor: 'pointer',
-                  fontSize: '18px',
-                  fontFamily: 'inherit',
-                }}
-              >
-                ♡
-              </button>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
+const eyebrow: React.CSSProperties = {
+  fontSize: 11, color: '#C85A3C', letterSpacing: '0.2em',
+  textTransform: 'uppercase', marginBottom: 16, fontWeight: 500,
+};
+
+const title: React.CSSProperties = {
+  fontFamily: 'Fraunces, "Noto Serif KR", Georgia, serif',
+  fontSize: 44, fontWeight: 500, color: '#1F1A14',
+  margin: 0, marginBottom: 16, lineHeight: 1.15, letterSpacing: '-0.015em',
+};
+
+const meta: React.CSSProperties = {
+  color: '#4A4136', fontSize: 15,
+};
+
+const loadingStyle: React.CSSProperties = {
+  padding: 80, textAlign: 'center', color: '#8A7F6D',
+};
+
+const emptyStyle: React.CSSProperties = {
+  padding: '100px 20px', textAlign: 'center',
+  backgroundColor: '#FBF8F1', border: '1px dashed #D9CDB6', borderRadius: 18,
+};
+
+const emptyTitle: React.CSSProperties = {
+  fontFamily: 'Fraunces, "Noto Serif KR", Georgia, serif',
+  fontSize: 22, fontWeight: 500, color: '#1F1A14', marginBottom: 12,
+};
+
+const emptyText: React.CSSProperties = {
+  fontSize: 14, color: '#4A4136', marginBottom: 24, lineHeight: 1.6,
+};
+
+const btnPrimary: React.CSSProperties = {
+  padding: '12px 24px', backgroundColor: '#1F1A14', color: '#F5F0E6',
+  border: 'none', borderRadius: 999, fontSize: 14, cursor: 'pointer',
+  fontFamily: 'inherit',
+};
+
+const cardStyle: React.CSSProperties = {
+  backgroundColor: '#FBF8F1', border: '1px solid #D9CDB6',
+  borderRadius: 18, padding: '20px 24px',
+  display: 'grid', gridTemplateColumns: '1fr 48px',
+  gap: 20, alignItems: 'center',
+};
+
+const cardCategory: React.CSSProperties = {
+  fontSize: 11, color: '#C85A3C', letterSpacing: '0.15em',
+  textTransform: 'uppercase', marginBottom: 6, fontWeight: 500,
+};
+
+const cardTitle: React.CSSProperties = {
+  fontFamily: 'Fraunces, "Noto Serif KR", Georgia, serif',
+  fontSize: 19, fontWeight: 500, color: '#1F1A14',
+  margin: 0, marginBottom: 6, letterSpacing: '-0.01em',
+};
+
+const cardOrg: React.CSSProperties = {
+  fontSize: 13, color: '#4A4136',
+};
+
+const btnHeart: React.CSSProperties = {
+  width: 44, height: 44, borderRadius: '50%',
+  border: '1px solid #C85A3C', backgroundColor: '#C85A3C',
+  color: '#F5F0E6', cursor: 'pointer', fontSize: 18,
+  fontFamily: 'inherit',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+};
