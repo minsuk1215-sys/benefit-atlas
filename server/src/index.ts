@@ -138,6 +138,47 @@ app.get('/api/policies/:id', async (req, res) => {
   }
 });
 
+// 추천 API
+app.post('/api/recommend', async (req, res) => {
+  let conn;
+  try {
+    const profile = req.body;
+    const { scorePolicy } = await import('./services/recommender');
+    
+    conn = await getConnection();
+    
+    // 전체 정책 조회 (나중에 인덱스로 미리 필터링 가능)
+    const result = await conn.execute(
+      `SELECT ID, TITLE, ORG, CATEGORY, LIFECYCLE,
+              TARGET_AGE_MIN, TARGET_AGE_MAX, APPLY_END, APPLY_URL, TAGS
+       FROM POLICY_MASTER
+       WHERE STATUS = 'ACTIVE'`,
+      [],
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+    
+    // 점수 계산 + 정렬
+    const scored = result.rows!
+      .map((p: any) => ({ ...p, _score: scorePolicy(profile, p) }))
+      .filter(p => p._score > 0)
+      .sort((a: any, b: any) => b._score - a._score)
+      .slice(0, 30);
+    
+    res.json({
+      ok: true,
+      profile,
+      count: scored.length,
+      data: scored,
+    });
+  } catch (err: any) {
+    console.error('Recommend error:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  } finally {
+    if (conn) await conn.close();
+  }
+});
+
+
 const PORT = Number(process.env.PORT) || 3301;
 
 // 서버 시작 시 Oracle 풀 초기화
