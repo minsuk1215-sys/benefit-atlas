@@ -3,6 +3,7 @@ import cors from 'cors';
 import 'dotenv/config';
 import oracledb from 'oracledb';
 import { initPool, getConnection } from './db';
+import adminRouter from './routes/admin';
 
 const app = express();
 
@@ -196,5 +197,7 @@ app.listen(PORT, '0.0.0.0', () => {
     process.exit(1);
   }
 }
+
+app.use('/admin', adminRouter);
 
 start();

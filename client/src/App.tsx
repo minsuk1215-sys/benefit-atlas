@@ -8,10 +8,37 @@ import JobsPage from './pages/JobsPage';
 import EducationPage from './pages/EducationPage';
 import LifecyclePage from './pages/LifecyclePage';
 import SchedulePage from './pages/SchedulePage';
+import AdminLoginPage from './pages/AdminLoginPage';
+import AdminPoliciesPage from './pages/AdminPoliciesPage';
+import AdminPolicyFormPage from './pages/AdminPolicyFormPage';
+import AdminProtected from './components/AdminProtected';
 
 function App() {
   return (
     <BrowserRouter>
+      <Routes>
+        {/* 관리자 라우트 (Topbar 없음) */}
+        <Route path="/admin/login" element={<AdminLoginPage />} />
+        <Route path="/admin/policies" element={
+          <AdminProtected><AdminPoliciesPage /></AdminProtected>
+        } />
+        <Route path="/admin/policies/new" element={
+          <AdminProtected><AdminPolicyFormPage /></AdminProtected>
+        } />
+        <Route path="/admin/policies/:id" element={
+          <AdminProtected><AdminPolicyFormPage /></AdminProtected>
+        } />
+
+        {/* 주민 라우트 (Topbar 있음) */}
+        <Route path="*" element={<PublicLayout />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+function PublicLayout() {
+  return (
+    <>
       <Topbar />
       <Routes>
         <Route path="/" element={<HomePage />} />
@@ -24,7 +51,7 @@ function App() {
         <Route path="/education" element={<EducationPage />} />
         <Route path="/schedule" element={<SchedulePage />} />
       </Routes>
-    </BrowserRouter>
+    </>
   );
 }
 

@@ -192,3 +192,117 @@ export function normalizeGov24(item: Gov24Item): NormalizedPolicy {
     status: 'ACTIVE',
   };
 }
+
+// ============== 온통청년 정규화 ==============
+
+interface YouthItem {
+  plcyNo: string;
+  plcyNm: string;
+  plcyKywdNm?: string;
+  plcyExplnCn?: string;
+  lclsfNm?: string;
+  mclsfNm?: string;
+  plcySprtCn?: string;
+  sprvsnInstCdNm?: string;
+  operInstCdNm?: string;
+  bizPrdEndYmd?: string;
+  bizPrdEtcCn?: string;
+  aplyUrlAddr?: string;
+  refUrlAddr1?: string;
+  addAplyQlfcCndCn?: string;
+  ptcpPrpTrgtCn?: string;
+  sprtTrgtMinAge?: string;
+  sprtTrgtMaxAge?: string;
+  sprtTrgtAgeLmtYn?: string;
+  mrgSttsCd?: string;
+  zipCd?: string;
+}
+
+// 온통청년 카테고리 매핑 (대분류 lclsfNm 기준)
+function mapYouthCategory(item: YouthItem): string {
+  const lcls = item.lclsfNm || '';
+  const mcls = item.mclsfNm || '';
+  const keyword = item.plcyKywdNm || '';
+  const all = lcls + ' ' + mcls + ' ' + keyword;
+
+  // 우선순위 높은 키워드부터 매칭 (구체적인 것 → 추상적인 것 순)
+  if (/일자리|취업|채용|창업/.test(all)) return '고용·창업';
+  if (/주거|주택|월세|전세/.test(all)) return '주거·자립';
+  if (/교육|직업훈련|학자금|장학|교육비/.test(all)) return '보육·교육';
+  if (/금융|대출|적금|예금|바우처|보조금|소득/.test(all)) return '생활안정';
+  if (/건강|의료|보건/.test(all)) return '건강·의료';
+  if (/문화|예술|여가/.test(all)) return '문화·여가';
+  if (/참여|권리/.test(all)) return '생활안정';
+
+  return lcls || '청년지원';
+}
+
+
+// YYYYMMDD (또는 공백) 파싱
+function parseYouthDate(ymd?: string): Date | null {
+  if (!ymd) return null;
+  const trimmed = ymd.trim();
+  if (trimmed.length !== 8 || !/^\d{8}$/.test(trimmed)) return null;
+  const y = parseInt(trimmed.substring(0, 4));
+  const m = parseInt(trimmed.substring(4, 6));
+  const d = parseInt(trimmed.substring(6, 8));
+  if (y < 2020 || y > 2030 || m < 1 || m > 12 || d < 1 || d > 31) return null;
+  return new Date(y, m - 1, d);
+}
+
+export function normalizeYouth(item: YouthItem): NormalizedPolicy {
+  const sourceId = item.plcyNo;
+
+  // 연령 (Y/N 플래그가 'Y'일 때만 신뢰)
+  const hasAgeLimit = item.sprtTrgtAgeLmtYn === 'Y';
+  const ageMin = hasAgeLimit && item.sprtTrgtMinAge
+    ? parseInt(item.sprtTrgtMinAge) || null : null;
+  const ageMax = hasAgeLimit && item.sprtTrgtMaxAge
+    ? parseInt(item.sprtTrgtMaxAge) || null : null;
+
+  // 설명: 정책 설명 + 지원 내용
+  const desc = [item.plcyExplnCn, item.plcySprtCn]
+    .filter(Boolean)
+    .map(s => (s || '').replace(/&apos;/g, "'").replace(/&amp;/g, '&'))
+    .join('\n\n');
+
+  // 자격 조건: 추가 자격 + 참여 대상
+  const target = [item.addAplyQlfcCndCn, item.ptcpPrpTrgtCn]
+    .filter(Boolean)
+    .map(s => (s || '').replace(/&apos;/g, "'").replace(/&amp;/g, '&'))
+    .join('\n\n');
+
+  // 태그: 키워드 + 대분류 + 중분류
+  const tags = [item.plcyKywdNm, item.lclsfNm, item.mclsfNm]
+    .filter(Boolean)
+    .join(',');
+
+  // 지역 추출 (zipCd 있으면 광역명, 없으면 주관기관명에서 추론)
+  const org = item.sprvsnInstCdNm || item.operInstCdNm || '';
+  let region = '전국';
+  if (org.includes('시청')) region = org.replace('시청', '').trim();
+  else if (org.includes('도청')) region = org.replace('도청', '').trim();
+  else if (org.includes('구청')) region = org;
+
+  return {
+    id: 'youth_' + sourceId,
+    tenantId: 'COMMON',
+    source: 'youth',
+    sourceId,
+    category: mapYouthCategory(item),
+    lifecycle: 'youth',  // 온통청년은 모두 청년 정책
+    title: item.plcyNm,
+    org: org || '온통청년',
+    description: desc || item.plcyNm,
+    amountText: null,
+    targetText: target || null,
+    targetAgeMin: ageMin,
+    targetAgeMax: ageMax,
+    region,
+    applyStart: null,
+    applyEnd: parseYouthDate(item.bizPrdEndYmd),
+    applyUrl: item.aplyUrlAddr || item.refUrlAddr1 || null,
+    tags,
+    status: 'ACTIVE',
+  };
+}
