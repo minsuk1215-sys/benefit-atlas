@@ -1,9 +1,11 @@
 import axios from 'axios';
+const apiBaseUrl = `http://${window.location.hostname}:3301`;
 
 export const api = axios.create({
-  baseURL: 'http://localhost:3301',
+  baseURL: apiBaseUrl,
   timeout: 10000,
 });
+
 
 // Health check
 export async function checkHealth() {

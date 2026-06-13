@@ -45,3 +45,49 @@ export function toggleSavedPolicy(policyId: string): string[] {
 export function isPolicySaved(policyId: string): boolean {
   return getSavedPolicies().includes(policyId);
 }
+
+// ============== 내 일정 ==============
+
+export interface UserSchedule {
+  id: string;           // 일정 고유 ID (timestamp 기반)
+  policyId: string;     // 정책 ID
+  policyTitle: string;  // 정책 제목 (조회 편의)
+  policyOrg: string;    // 정책 기관 (조회 편의)
+  applyDate: string;    // 신청 예정일 (YYYY-MM-DD)
+  memo: string;         // 사용자 메모
+  createdAt: string;    // 추가 시각
+}
+
+const SCHEDULES_KEY = 'benefitatlas_schedules';
+
+export function getSchedules(): UserSchedule[] {
+  const raw = localStorage.getItem(SCHEDULES_KEY);
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+export function addSchedule(schedule: Omit<UserSchedule, 'id' | 'createdAt'>): UserSchedule {
+  const newItem: UserSchedule = {
+    ...schedule,
+    id: 'sch_' + Date.now(),
+    createdAt: new Date().toISOString(),
+  };
+  const all = getSchedules();
+  all.push(newItem);
+  localStorage.setItem(SCHEDULES_KEY, JSON.stringify(all));
+  return newItem;
+}
+
+export function removeSchedule(scheduleId: string): UserSchedule[] {
+  const all = getSchedules().filter(s => s.id !== scheduleId);
+  localStorage.setItem(SCHEDULES_KEY, JSON.stringify(all));
+  return all;
+}
+
+export function getSchedulesForPolicy(policyId: string): UserSchedule[] {
+  return getSchedules().filter(s => s.policyId === policyId);
+}

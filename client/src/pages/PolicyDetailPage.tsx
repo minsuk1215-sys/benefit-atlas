@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
-import { toggleSavedPolicy, isPolicySaved } from '../utils/storage';
+import { toggleSavedPolicy, isPolicySaved, addSchedule, getSchedulesForPolicy, removeSchedule } from '../utils/storage';
+import type { UserSchedule } from '../utils/storage';
 
 interface PolicyDetail {
   ID: string;
@@ -26,11 +27,15 @@ export default function PolicyDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [policySchedules, setPolicySchedules] = useState<UserSchedule[]>([]);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
 
   useEffect(() => {
     if (!id) return;
     setLoading(true);
     setSaved(isPolicySaved(id));
+    setPolicySchedules(getSchedulesForPolicy(id));
+
     api.get('/api/policies/' + id)
       .then(res => {
         setPolicy(res.data.data);
@@ -44,6 +49,11 @@ export default function PolicyDetailPage() {
     if (!id) return;
     toggleSavedPolicy(id);
     setSaved(prev => !prev);
+  };
+
+  const refreshSchedules = () => {
+    if (!id) return;
+    setPolicySchedules(getSchedulesForPolicy(id));
   };
 
   if (loading) {
@@ -88,10 +98,42 @@ export default function PolicyDetailPage() {
             <strong>{policy.ORG}</strong>
             {policy.REGION ? <span style={{ color: '#8A7F6D' }}>{' · ' + policy.REGION}</span> : null}
           </div>
-          <button onClick={handleToggleSave} style={saved ? btnSaved : btnSaveOff}>
-            {saved ? '저장됨' : '관심저장'}
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => setShowScheduleModal(true)} style={btnSchedule}>
+              📅 일정 추가
+            </button>
+            <button onClick={handleToggleSave} style={saved ? btnSaved : btnSaveOff}>
+              {saved ? '저장됨' : '관심저장'}
+            </button>
+          </div>
         </div>
+
+        {policySchedules.length > 0 ? (
+          <div style={scheduleBox}>
+            <div style={{ fontSize: 12, color: '#2F5D3F', fontWeight: 500, marginBottom: 8, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+              내가 추가한 일정
+            </div>
+            {policySchedules.map(s => (
+              <div key={s.id} style={scheduleItem}>
+                <div>
+                  <div style={{ fontSize: 14, color: '#1F1A14', fontWeight: 500 }}>
+                    {new Date(s.applyDate).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })}
+                  </div>
+                  {s.memo ? <div style={{ fontSize: 12, color: '#4A4136', marginTop: 4 }}>{s.memo}</div> : null}
+                </div>
+                <button
+                  onClick={() => {
+                    removeSchedule(s.id);
+                    refreshSchedules();
+                  }}
+                  style={btnDelete}
+                >
+                  삭제
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null}
 
         <div style={infoBox}>
           <div>
@@ -139,6 +181,84 @@ export default function PolicyDetailPage() {
           </div>
         ) : null}
       </div>
+
+      {showScheduleModal ? (
+        <ScheduleModal
+          policy={policy}
+          onClose={() => setShowScheduleModal(false)}
+          onAdded={() => {
+            refreshSchedules();
+            setShowScheduleModal(false);
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function ScheduleModal({
+  policy, onClose, onAdded,
+}: {
+  policy: PolicyDetail;
+  onClose: () => void;
+  onAdded: () => void;
+}) {
+  const today = new Date().toISOString().split('T')[0];
+  const [date, setDate] = useState(today);
+  const [memo, setMemo] = useState('');
+
+  const handleSubmit = () => {
+    addSchedule({
+      policyId: policy.ID,
+      policyTitle: policy.TITLE,
+      policyOrg: policy.ORG || '',
+      applyDate: date,
+      memo: memo.trim(),
+    });
+    onAdded();
+  };
+
+  return (
+    <div style={modalBackdrop} onClick={onClose}>
+      <div style={modalBox} onClick={e => e.stopPropagation()}>
+        <h3 style={{ margin: 0, marginBottom: 16, fontSize: 20, color: '#1F1A14', fontWeight: 500 }}>
+          신청 일정 추가
+        </h3>
+        <div style={{ fontSize: 13, color: '#4A4136', marginBottom: 24 }}>
+          {policy.TITLE}
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', fontSize: 12, color: '#4A4136', marginBottom: 8 }}>
+            신청 예정일
+          </label>
+          <input
+            type="date"
+            value={date}
+            min={today}
+            onChange={e => setDate(e.target.value)}
+            style={inputStyle}
+          />
+        </div>
+
+        <div style={{ marginBottom: 24 }}>
+          <label style={{ display: 'block', fontSize: 12, color: '#4A4136', marginBottom: 8 }}>
+            메모 (선택)
+          </label>
+          <input
+            type="text"
+            value={memo}
+            onChange={e => setMemo(e.target.value)}
+            placeholder="예: 점심시간에 신청"
+            style={inputStyle}
+          />
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={btnCancel}>취소</button>
+          <button onClick={handleSubmit} style={btnPrimary}>추가</button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -147,76 +267,105 @@ const btnBack: React.CSSProperties = {
   background: 'none', border: 'none', color: '#4A4136', fontSize: 13,
   cursor: 'pointer', padding: '8px 0', fontFamily: 'inherit', marginBottom: 16,
 };
-
 const btnBlack: React.CSSProperties = {
   padding: '12px 24px', backgroundColor: '#1F1A14', color: '#F5F0E6',
   border: 'none', borderRadius: 999, fontSize: 14, cursor: 'pointer',
   fontFamily: 'inherit',
 };
-
 const catLabel: React.CSSProperties = {
   fontSize: 11, color: '#C85A3C', letterSpacing: '0.2em',
   textTransform: 'uppercase', marginBottom: 12, fontWeight: 500,
 };
-
 const titleStyle: React.CSSProperties = {
   fontSize: 36, color: '#1F1A14', margin: 0, marginBottom: 16,
   lineHeight: 1.2, fontWeight: 500,
 };
-
 const headerRow: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
   gap: 16, marginBottom: 32, paddingBottom: 24,
   borderBottom: '1px solid #D9CDB6',
 };
-
+const btnSchedule: React.CSSProperties = {
+  padding: '10px 18px', borderRadius: 999, border: '1px solid #2F5D3F',
+  backgroundColor: 'transparent', color: '#2F5D3F', cursor: 'pointer',
+  fontSize: 13, fontFamily: 'inherit',
+};
 const btnSaveOff: React.CSSProperties = {
   padding: '10px 18px', borderRadius: 999, border: '1px solid #D9CDB6',
   backgroundColor: 'transparent', color: '#1F1A14', cursor: 'pointer',
   fontSize: 13, fontFamily: 'inherit',
 };
-
 const btnSaved: React.CSSProperties = {
   padding: '10px 18px', borderRadius: 999, border: '1px solid #C85A3C',
   backgroundColor: '#C85A3C', color: '#F5F0E6', cursor: 'pointer',
   fontSize: 13, fontFamily: 'inherit',
 };
-
+const scheduleBox: React.CSSProperties = {
+  marginBottom: 32, padding: 20,
+  backgroundColor: '#EEF4EE',
+  border: '1px solid #2F5D3F',
+  borderRadius: 14,
+};
+const scheduleItem: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+  padding: '8px 0',
+};
+const btnDelete: React.CSSProperties = {
+  background: 'none', border: 'none', color: '#8A7F6D', fontSize: 12,
+  cursor: 'pointer', fontFamily: 'inherit',
+};
 const infoBox: React.CSSProperties = {
   display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
   gap: 16, marginBottom: 32, padding: 20,
   backgroundColor: '#FBF8F1', border: '1px solid #D9CDB6', borderRadius: 14,
 };
-
 const infoLabel: React.CSSProperties = {
   fontSize: 11, color: '#8A7F6D', marginBottom: 4,
 };
-
 const infoValue: React.CSSProperties = {
   fontSize: 15, color: '#1F1A14', fontWeight: 500,
 };
-
 const sectionTitle: React.CSSProperties = {
   fontSize: 13, color: '#C85A3C', letterSpacing: '0.1em',
   textTransform: 'uppercase', marginBottom: 12, fontWeight: 500,
 };
-
 const sectionText: React.CSSProperties = {
   fontSize: 15, color: '#1F1A14', lineHeight: 1.7, whiteSpace: 'pre-wrap',
 };
-
 const tagStyle: React.CSSProperties = {
   padding: '6px 14px', backgroundColor: '#F5F0E6', color: '#4A4136',
   borderRadius: 999, fontSize: 12, border: '1px solid #D9CDB6',
 };
-
 const ctaBox: React.CSSProperties = {
   marginTop: 40, padding: 24, backgroundColor: '#1F1A14',
   borderRadius: 18, textAlign: 'center',
 };
-
 const ctaLink: React.CSSProperties = {
   display: 'inline-block', padding: '14px 32px',
   backgroundColor: '#C85A3C', color: '#F5F0E6', borderRadius: 999,
   fontSize: 15, textDecoration: 'none', fontWeight: 500,
+};
+const modalBackdrop: React.CSSProperties = {
+  position: 'fixed', inset: 0, backgroundColor: 'rgba(31, 26, 20, 0.5)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  zIndex: 100, padding: 20,
+};
+const modalBox: React.CSSProperties = {
+  backgroundColor: '#FBF8F1', borderRadius: 18, padding: 32,
+  maxWidth: 420, width: '100%',
+};
+const inputStyle: React.CSSProperties = {
+  width: '100%', padding: 12, fontSize: 14, fontFamily: 'inherit',
+  border: '1px solid #D9CDB6', borderRadius: 10,
+  backgroundColor: '#FFFFFF', color: '#1F1A14', boxSizing: 'border-box',
+};
+const btnCancel: React.CSSProperties = {
+  padding: '12px 20px', backgroundColor: 'transparent',
+  border: '1px solid #D9CDB6', color: '#1F1A14',
+  borderRadius: 999, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+};
+const btnPrimary: React.CSSProperties = {
+  padding: '12px 20px', backgroundColor: '#2F5D3F', color: '#F5F0E6',
+  border: 'none', borderRadius: 999, fontSize: 13, cursor: 'pointer',
+  fontFamily: 'inherit', fontWeight: 500,
 };

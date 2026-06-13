@@ -7,6 +7,7 @@ import PolicyDetailPage from './pages/PolicyDetailPage';
 import JobsPage from './pages/JobsPage';
 import EducationPage from './pages/EducationPage';
 import LifecyclePage from './pages/LifecyclePage';
+import SchedulePage from './pages/SchedulePage';
 
 function App() {
   return (
@@ -46,7 +47,8 @@ function App() {
   <Link to="/jobs" style={navLink}>일자리</Link>
   <Link to="/education" style={navLink}>자녀교육</Link>
   <div style={{ flex: 1 }} />
-  <Link to="/saved" style={navLink}>♡ 관심 정책</Link>
+  <Link to="/schedule" style={navLink}>📅 내 일정</Link>
+<Link to="/saved" style={navLink}>♡ 관심 정책</Link>
 </nav>
 
         {/* 페이지 라우팅 */}
@@ -59,6 +61,7 @@ function App() {
       <Route path="/lifecycle" element={<LifecyclePage />} />
       <Route path="/jobs" element={<JobsPage />} />
       <Route path="/education" element={<EducationPage />} />
+      <Route path="/schedule" element={<SchedulePage />} />      
     </Routes>
 
 

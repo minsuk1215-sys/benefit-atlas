@@ -7,7 +7,10 @@ import { initPool, getConnection } from './db';
 const app = express();
 
 app.use(cors({
-  origin: 'http://localhost:3300',
+    origin: [
+    'http://localhost:3300',
+    'http://192.168.11.25:3300',
+  ],
   credentials: true,
 }));
 app.use(express.json());
@@ -185,8 +188,8 @@ const PORT = Number(process.env.PORT) || 3301;
 async function start() {
   try {
     await initPool();
-    app.listen(PORT, () => {
-      console.log(`Server running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on http://0.0.0.0:${PORT}`);
     });
   } catch (err) {
     console.error('Failed to start server:', err);
