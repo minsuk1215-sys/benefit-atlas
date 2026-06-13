@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { saveProfile, loadProfile } from '../utils/storage';
 
 export interface UserProfile {
   age?: number;
@@ -15,11 +16,18 @@ export default function SearchPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [profile, setProfile] = useState<UserProfile>({});
+  
+  // 저장된 프로필 자동 로드 (이 부분 추가)
+  useEffect(() => {
+    const saved = loadProfile();
+    if (saved) setProfile(saved);
+  }, []);
 
   const update = (k: keyof UserProfile, v: any) => setProfile(prev => ({ ...prev, [k]: v }));
 
   const handleSubmit = () => {
     // 결과 페이지로 프로필 전달
+     saveProfile(profile);
     navigate('/result', { state: { profile } });
   };
 

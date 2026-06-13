@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import type { Policy } from '../api/client';
+import { toggleSavedPolicy, getSavedPolicies } from '../utils/storage';
 
 export default function ResultPage() {
   const location = useLocation();
@@ -10,6 +11,11 @@ export default function ResultPage() {
 
   const [policies, setPolicies] = useState<(Policy & { _score: number })[]>([]);
   const [loading, setLoading] = useState(true);
+  const [savedIds, setSavedIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    setSavedIds(getSavedPolicies());
+  }, []);
 
   useEffect(() => {
     if (!profile) {
@@ -24,6 +30,11 @@ export default function ResultPage() {
   }, [profile]);
 
   if (!profile) return null;
+
+  const handleToggleSave = (policyId: string) => {
+    const next = toggleSavedPolicy(policyId);
+    setSavedIds(next);
+  };
 
   return (
     <div style={{ padding: '40px 20px' }}>
@@ -65,42 +76,65 @@ export default function ResultPage() {
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {policies.map((p, idx) => (
-            <div
-              key={p.ID}
-              onClick={() => p.APPLY_URL && window.open(p.APPLY_URL, '_blank')}
-              style={{
-                backgroundColor: '#FBF8F1',
-                border: '1px solid #D9CDB6',
-                borderRadius: '18px',
-                padding: '20px 24px',
-                cursor: 'pointer',
-                display: 'grid',
-                gridTemplateColumns: '50px 1fr auto',
-                gap: '20px',
-                alignItems: 'center',
-              }}
-            >
-              <div style={{ fontSize: '24px', fontStyle: 'italic', color: '#C85A3C', fontWeight: 500 }}>
-                {idx + 1}
-              </div>
-              <div>
-                <div style={{ fontSize: '11px', color: '#C85A3C', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px', fontWeight: 500 }}>
-                  {p.CATEGORY}
+          {policies.map((p, idx) => {
+            const isSaved = savedIds.includes(p.ID);
+            return (
+              <div
+                key={p.ID}
+                style={{
+                  backgroundColor: '#FBF8F1',
+                  border: '1px solid #D9CDB6',
+                  borderRadius: '18px',
+                  padding: '20px 24px',
+                  display: 'grid',
+                  gridTemplateColumns: '50px 1fr auto 50px',
+                  gap: '20px',
+                  alignItems: 'center',
+                }}
+              >
+                <div style={{ fontSize: '24px', fontStyle: 'italic', color: '#C85A3C', fontWeight: 500 }}>
+                  {idx + 1}
                 </div>
-                <h4 style={{ margin: 0, fontSize: '18px', color: '#1F1A14', fontWeight: 500, marginBottom: '6px' }}>
-                  {p.TITLE}
-                </h4>
-                <div style={{ fontSize: '13px', color: '#4A4136' }}>{p.ORG}</div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '11px', color: '#8A7F6D', marginBottom: '4px' }}>매칭 점수</div>
-                <div style={{ fontSize: '22px', color: '#2F5D3F', fontStyle: 'italic', fontWeight: 500 }}>
-                  {p._score}
+                <div
+                  onClick={() => navigate(`/policy/${p.ID}`)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div style={{ fontSize: '11px', color: '#C85A3C', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px', fontWeight: 500 }}>
+                    {p.CATEGORY}
+                  </div>
+                  <h4 style={{ margin: 0, fontSize: '18px', color: '#1F1A14', fontWeight: 500, marginBottom: '6px' }}>
+                    {p.TITLE}
+                  </h4>
+                  <div style={{ fontSize: '13px', color: '#4A4136' }}>{p.ORG}</div>
                 </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '11px', color: '#8A7F6D', marginBottom: '4px' }}>매칭 점수</div>
+                  <div style={{ fontSize: '22px', color: '#2F5D3F', fontStyle: 'italic', fontWeight: 500 }}>
+                    {p._score}
+                  </div>
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleToggleSave(p.ID);
+                  }}
+                  style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '50%',
+                    border: isSaved ? '1px solid #C85A3C' : '1px solid #D9CDB6',
+                    backgroundColor: isSaved ? '#C85A3C' : 'transparent',
+                    color: isSaved ? '#F5F0E6' : '#1F1A14',
+                    cursor: 'pointer',
+                    fontSize: '18px',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  ♡
+                </button>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

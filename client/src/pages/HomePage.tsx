@@ -1,13 +1,20 @@
+
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchPolicies } from '../api/client';
 import type { Policy } from '../api/client';
+import { loadProfile } from '../utils/storage';
 
 export default function HomePage() {
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [total, setTotal] = useState(0);
   const [filterCategory, setFilterCategory] = useState<string>('');
+  const [hasProfile, setHasProfile] = useState(false);  // 추가
   const navigate = useNavigate();
+
+    useEffect(() => {
+    setHasProfile(!!loadProfile());  // 이 줄 추가
+  }, []);
 
   useEffect(() => {
     fetchPolicies({ limit: 12, category: filterCategory || undefined })
@@ -36,6 +43,7 @@ export default function HomePage() {
             생애주기와 조건을 기반으로 흩어진 정부 정책을 한 곳에 모아드립니다.
             현재 <strong>{total.toLocaleString()}건</strong>의 공공정책이 등록되어 있습니다.
           </p>
+          
           <div style={{ marginTop: '32px', display: 'flex', gap: '12px' }}>
             <button
               onClick={() => navigate('/search')}
@@ -53,7 +61,28 @@ export default function HomePage() {
             >
               내 혜택 찾기 →
             </button>
+            {hasProfile && (
+              <button
+                onClick={() => {
+                  const profile = loadProfile();
+                  navigate('/result', { state: { profile } });
+                }}
+                style={{
+                  padding: '14px 28px',
+                  backgroundColor: 'transparent',
+                  color: '#1F1A14',
+                  border: '1px solid #D9CDB6',
+                  borderRadius: '999px',
+                  fontSize: '15px',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                이전 추천 다시 보기 →
+              </button>
+            )}
           </div>
+
         </div>
 
         {/* 카테고리 필터 */}
@@ -94,6 +123,7 @@ export default function HomePage() {
 }
 
 function PolicyCard({ policy: p }: { policy: Policy }) {
+  const navigate = useNavigate();
   return (
     <div
       style={{
@@ -107,7 +137,7 @@ function PolicyCard({ policy: p }: { policy: Policy }) {
         gap: '10px',
         minHeight: '180px',
       }}
-      onClick={() => p.APPLY_URL && window.open(p.APPLY_URL, '_blank')}
+      onClick={() => navigate(`/policy/${p.ID}`)}
     >
       <div style={{ fontSize: '11px', color: '#C85A3C', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 500 }}>
         {p.CATEGORY}

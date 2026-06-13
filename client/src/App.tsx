@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-do
 import HomePage from './pages/HomePage';
 import SearchPage from './pages/SearchPage';
 import ResultPage from './pages/ResultPage';
+import SavedPage from './pages/SavedPage';
+import PolicyDetailPage from './pages/PolicyDetailPage';
 
 function App() {
   return (
@@ -33,16 +35,21 @@ function App() {
           }}>
             BenefitAtlas
           </Link>
-          <Link to="/" style={{ color: '#4A4136', textDecoration: 'none', fontSize: '14px' }}>홈</Link>
-          <Link to="/search" style={{ color: '#4A4136', textDecoration: 'none', fontSize: '14px' }}>내 혜택 찾기</Link>
+         
+<Link to="/" style={{ color: '#4A4136', textDecoration: 'none', fontSize: '14px' }}>홈</Link>
+<Link to="/search" style={{ color: '#4A4136', textDecoration: 'none', fontSize: '14px' }}>내 혜택 찾기</Link>
+<Link to="/saved" style={{ color: '#4A4136', textDecoration: 'none', fontSize: '14px' }}>♡ 관심 정책</Link>
         </nav>
 
         {/* 페이지 라우팅 */}
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/search" element={<SearchPage />} />
-          <Route path="/result" element={<ResultPage />} />
-        </Routes>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/search" element={<SearchPage />} />
+        <Route path="/result" element={<ResultPage />} />
+        <Route path="/saved" element={<SavedPage />} />
+<Route path="/policy/:id" element={<PolicyDetailPage />} />  {/* 추가 */}        
+      </Routes>
+
       </div>
     </BrowserRouter>
   );
