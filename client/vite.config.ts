@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: '0.0.0.0',      // 모든 네트워크 인터페이스 바인딩 (외부 접근 허용)
+    host: '0.0.0.0',   // 추가
     port: 3300,
     strictPort: true,
   },

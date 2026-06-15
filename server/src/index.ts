@@ -8,7 +8,7 @@ import adminRouter from './routes/admin';
 const app = express();
 
 app.use(cors({
-    origin: [
+  origin: [
     'http://localhost:3300',
     'http://192.168.11.25:3300',
   ],
@@ -53,17 +53,15 @@ app.get('/api/policies', async (req, res) => {
   let conn;
   try {
     conn = await getConnection();
-    
-    // 쿼리 파라미터
+
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
     const offset = parseInt(req.query.offset as string) || 0;
     const category = req.query.category as string | undefined;
     const lifecycle = req.query.lifecycle as string | undefined;
-    
-    // WHERE 절 조립
+
     const wheres: string[] = ["STATUS = 'ACTIVE'"];
     const binds: any = {};
-    
+
     if (category) {
       wheres.push('CATEGORY = :category');
       binds.category = category;
@@ -72,23 +70,21 @@ app.get('/api/policies', async (req, res) => {
       wheres.push('LIFECYCLE LIKE :lifecycle');
       binds.lifecycle = `%${lifecycle}%`;
     }
-    
+
     const whereClause = wheres.join(' AND ');
-    
-    // 총 개수
+
     const countResult = await conn.execute(
       `SELECT COUNT(*) AS CNT FROM POLICY_MASTER WHERE ${whereClause}`,
       binds,
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
     );
     const total = (countResult.rows![0] as any).CNT;
-    
-    // 목록
+
     binds.limit = limit;
     binds.offset = offset;
     const result = await conn.execute(
       `SELECT ID, TITLE, ORG, CATEGORY, LIFECYCLE,
-              TARGET_AGE_MIN, TARGET_AGE_MAX, APPLY_END, APPLY_URL, TAGS
+              TARGET_AGE_MIN, TARGET_AGE_MAX, APPLY_END, APPLY_URL, TAGS, REGION
        FROM POLICY_MASTER
        WHERE ${whereClause}
        ORDER BY CREATED_AT DESC
@@ -96,7 +92,7 @@ app.get('/api/policies', async (req, res) => {
       binds,
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
     );
-    
+
     res.json({
       ok: true,
       total,
@@ -120,12 +116,11 @@ app.get('/api/policies/:id', async (req, res) => {
       [req.params.id],
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
     );
-    
+
     if (result.rows!.length === 0) {
       return res.status(404).json({ ok: false, error: '정책을 찾을 수 없습니다' });
     }
-    
-    // CLOB 필드 읽기 (description, targetText)
+
     const row: any = result.rows![0];
     if (row.DESCRIPTION && typeof row.DESCRIPTION === 'object') {
       row.DESCRIPTION = await row.DESCRIPTION.getData();
@@ -133,7 +128,7 @@ app.get('/api/policies/:id', async (req, res) => {
     if (row.TARGET_TEXT && typeof row.TARGET_TEXT === 'object') {
       row.TARGET_TEXT = await row.TARGET_TEXT.getData();
     }
-    
+
     res.json({ ok: true, data: row });
   } catch (err: any) {
     res.status(500).json({ ok: false, error: err.message });
@@ -148,26 +143,24 @@ app.post('/api/recommend', async (req, res) => {
   try {
     const profile = req.body;
     const { scorePolicy } = await import('./services/recommender');
-    
+
     conn = await getConnection();
-    
-    // 전체 정책 조회 (나중에 인덱스로 미리 필터링 가능)
+
     const result = await conn.execute(
       `SELECT ID, TITLE, ORG, CATEGORY, LIFECYCLE,
-              TARGET_AGE_MIN, TARGET_AGE_MAX, APPLY_END, APPLY_URL, TAGS
+              TARGET_AGE_MIN, TARGET_AGE_MAX, APPLY_END, APPLY_URL, TAGS, REGION
        FROM POLICY_MASTER
        WHERE STATUS = 'ACTIVE'`,
       [],
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
     );
-    
-    // 점수 계산 + 정렬
+
     const scored = result.rows!
       .map((p: any) => ({ ...p, _score: scorePolicy(profile, p) }))
       .filter(p => p._score > 0)
       .sort((a: any, b: any) => b._score - a._score)
       .slice(0, 30);
-    
+
     res.json({
       ok: true,
       profile,
@@ -182,22 +175,20 @@ app.post('/api/recommend', async (req, res) => {
   }
 });
 
+app.use('/admin', adminRouter);
 
 const PORT = Number(process.env.PORT) || 3301;
 
-// 서버 시작 시 Oracle 풀 초기화
 async function start() {
   try {
     await initPool();
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on http://0.0.0.0:${PORT}`);
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on http://0.0.0.0:${PORT}`);
     });
   } catch (err) {
     console.error('Failed to start server:', err);
     process.exit(1);
   }
 }
-
-app.use('/admin', adminRouter);
 
 start();
