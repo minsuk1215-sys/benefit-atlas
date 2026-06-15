@@ -451,3 +451,31 @@ export function normalizeWork24Training(item: Work24Training): NormalizedPolicy 
     status: 'ACTIVE',
   };
 }
+
+// 일학습병행 정규화 (대부분 청년 신입 대상)
+export function normalizeDualTraining(item: Work24Training): NormalizedPolicy {
+  const base = normalizeWork24Training(item);
+  return {
+    ...base,
+    id: 'work24_dual_' + item.trprId,
+    source: 'work24_dual',
+    category: '고용·창업',
+    lifecycle: 'youth',  // 일학습병행은 청년 대상
+    tags: (base.tags ? base.tags + ',' : '') + '일학습병행',
+  };
+}
+
+// 사업주훈련 정규화 (재직자 대상)
+export function normalizeEmployerTraining(item: Work24Training): NormalizedPolicy {
+  const base = normalizeWork24Training(item);
+  return {
+    ...base,
+    id: 'work24_emp_' + item.trprId,
+    source: 'work24_emp',
+    category: '고용·창업',
+    lifecycle: 'all',  // 재직자는 모든 연령
+    tags: (base.tags ? base.tags + ',' : '') + '사업주훈련,재직자',
+  };
+}
+
+

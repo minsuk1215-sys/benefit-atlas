@@ -13,8 +13,8 @@ export async function fetchTomorrowCardCourses(params: {
   srchNcs1?: string;     // NCS 직종 대분류
   crseTracseSe?: string; // 훈련유형 (C0061=내일배움카드 일반)
 }) {
-  const queryParams: any = {
-    authKey: process.env.WORK24_RECRUIT_KEY || process.env.WORK24_KEY,
+const queryParams: any = {
+  authKey: process.env.WORK24_DUAL_KEY || process.env.WORK24_KEY,
     returnType: 'JSON',
     outType: '1',  // 1=리스트, 2=상세
     pageNum: params.pageNum,
@@ -51,8 +51,8 @@ export async function fetchRecruitList(params: {
   occupation?: string;
   returnType?: 'JSON' | 'XML';
 }) {
-  const queryParams: any = {
-    authKey: process.env.WORK24_KEY,
+const queryParams: any = {
+  authKey: process.env.WORK24_EMP_KEY || process.env.WORK24_KEY,
     callTp: 'L',
     returnType: params.returnType || 'JSON',  // JSON 먼저 시도
     startPage: params.startPage,
@@ -73,3 +73,84 @@ export async function fetchRecruitList(params: {
     throw err;
   }
 }
+
+// 일학습병행 훈련과정 목록
+const URL_DUAL_TRAINING = 'https://www.work24.go.kr/cm/openApi/call/hr/callOpenApiSvcInfo313L01.do';
+
+export async function fetchDualTrainingCourses(params: {
+  pageNum: number;
+  pageSize?: number;
+  srchTraStDt: string;
+  srchTraEndDt: string;
+  srchTraArea1?: string;
+  srchNcs1?: string;
+  crseTracseSe?: string;
+}) {
+  const queryParams: any = {
+    authKey: process.env.WORK24_KEY,
+    returnType: 'JSON',
+    outType: '1',
+    pageNum: params.pageNum,
+    pageSize: params.pageSize || 50,
+    srchTraStDt: params.srchTraStDt,
+    srchTraEndDt: params.srchTraEndDt,
+    sort: 'DESC',
+    sortCol: '2',
+  };
+
+  if (params.srchTraArea1) queryParams.srchTraArea1 = params.srchTraArea1;
+  if (params.srchNcs1) queryParams.srchNcs1 = params.srchNcs1;
+  if (params.crseTracseSe) queryParams.crseTracseSe = params.crseTracseSe;
+
+  try {
+    const { data } = await axios.get(URL_DUAL_TRAINING, {
+      params: queryParams,
+      timeout: 15000,
+    });
+    return data;
+  } catch (err: any) {
+    console.error('work24 일학습병행 호출 실패:', err.response?.status || err.message);
+    throw err;
+  }
+}
+
+// 사업주훈련 훈련과정 목록
+const URL_EMPLOYER_TRAINING = 'https://www.work24.go.kr/cm/openApi/call/hr/callOpenApiSvcInfo311L01.do';
+
+export async function fetchEmployerTrainingCourses(params: {
+  pageNum: number;
+  pageSize?: number;
+  srchTraStDt: string;
+  srchTraEndDt: string;
+  srchTraArea1?: string;
+  srchNcs1?: string;
+  crseTracseSe?: string;
+}) {
+const queryParams: any = {
+  authKey: process.env.WORK24_DUAL_KEY || process.env.WORK24_KEY,
+    returnType: 'JSON',
+    outType: '1',
+    pageNum: params.pageNum,
+    pageSize: params.pageSize || 50,
+    srchTraStDt: params.srchTraStDt,
+    srchTraEndDt: params.srchTraEndDt,
+    sort: 'DESC',
+    sortCol: '2',
+  };
+
+  if (params.srchTraArea1) queryParams.srchTraArea1 = params.srchTraArea1;
+  if (params.srchNcs1) queryParams.srchNcs1 = params.srchNcs1;
+  if (params.crseTracseSe) queryParams.crseTracseSe = params.crseTracseSe;
+
+  try {
+    const { data } = await axios.get(URL_EMPLOYER_TRAINING, {
+      params: queryParams,
+      timeout: 15000,
+    });
+    return data;
+  } catch (err: any) {
+    console.error('work24 사업주훈련 호출 실패:', err.response?.status || err.message);
+    throw err;
+  }
+}
+
