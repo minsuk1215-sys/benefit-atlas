@@ -306,3 +306,148 @@ export function normalizeYouth(item: YouthItem): NormalizedPolicy {
     status: 'ACTIVE',
   };
 }
+
+// ============== work24 훈련과정 정규화 ==============
+
+interface Work24Training {
+  trprId: string;        // 훈련과정 ID
+  title: string;
+  subTitle: string;      // 훈련기관명
+  address: string;
+  traStartDate: string;  // "2026-09-15"
+  traEndDate: string;
+  trainTarget: string;   // "국민내일배움카드(일반)"
+  trainTargetCd: string;
+  courseMan: string;
+  realMan: string;
+  ncsCd: string;
+  stdgScor: string;
+  eiEmplRate3: string;
+  eiEmplRate6: string;
+  certificate: string;
+  yardMan: string;
+  wkendSe: string;
+  titleLink: string;
+  telNo: string;
+}
+
+// NCS 1차 코드 → 카테고리 매핑
+function mapNcsToCategory(ncsCd: string): string {
+  if (!ncsCd) return '보육·교육';
+  const ncs1 = ncsCd.substring(0, 2);
+
+  switch (ncs1) {
+    case '01': // 사업관리
+    case '02': // 경영/회계/사무
+    case '03': // 금융/보험
+      return '고용·창업';
+    case '04': // 교육/자연/사회과학
+      return '보육·교육';
+    case '06': // 보건/의료
+      return '건강·의료';
+    case '07': // 사회복지/종교
+      return '보호·돌봄';
+    case '08': // 문화/예술/디자인/방송
+      return '문화·여가';
+    case '20': // 정보통신 (IT)
+    case '19': // 전기/전자
+      return '고용·창업';
+    case '14': // 건설
+    case '15': // 기계
+    case '16': // 재료
+    case '17': // 화학/바이오
+    case '18': // 섬유/의복
+    case '21': // 식품가공
+    case '22': // 인쇄/목재/가구/공예
+    case '23': // 환경/에너지/안전
+    case '24': // 농림어업
+      return '고용·창업';
+    default:
+      return '보육·교육';
+  }
+}
+
+// "2026-09-15" → Date
+function parseTrainDate(dateStr?: string): Date | null {
+  if (!dateStr || dateStr.length < 10) return null;
+  const d = new Date(dateStr);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+// 주소에서 광역시·도 추출
+function extractRegion(addr: string): string {
+  if (!addr) return '전국';
+  const first = addr.split(' ')[0];
+  // "경기" "서울" "부산" 등 광역 단위
+  return first || '전국';
+}
+
+// 천원 단위로 표시
+function formatPrice(amount?: string): string {
+  if (!amount) return '';
+  const num = parseInt(amount);
+  if (isNaN(num) || num === 0) return '';
+  return Math.floor(num / 1000).toLocaleString() + '천원';
+}
+
+export function normalizeWork24Training(item: Work24Training): NormalizedPolicy {
+  const sourceId = item.trprId;
+  const startDate = parseTrainDate(item.traStartDate);
+  const endDate = parseTrainDate(item.traEndDate);
+// K-디지털 여부 (태그·카테고리·생애주기에서 모두 사용)
+  const isKDigital = item.trainTargetCd === 'C0104';
+
+  // 설명: 기관, 기간, 비용 정보
+  const period = item.traStartDate && item.traEndDate
+    ? `훈련기간: ${item.traStartDate} ~ ${item.traEndDate}`
+    : '';
+  const cost = item.courseMan && parseInt(item.courseMan) > 0
+    ? `훈련비: ${formatPrice(item.courseMan)}`
+    : '';
+  const capacity = item.yardMan ? `정원: ${item.yardMan}명` : '';
+  const cert = item.certificate ? `자격증: ${item.certificate}` : '';
+
+  const desc = [
+    `${item.subTitle || '훈련기관'}에서 진행하는 직업훈련 과정입니다.`,
+    period, cost, capacity, cert,
+  ].filter(Boolean).join('\n');
+
+  // 자격: 훈련대상
+  const target = item.trainTarget
+    ? `훈련 대상: ${item.trainTarget}`
+    : '국민내일배움카드 발급자';
+
+  // 태그: 훈련대상, NCS 분류, 주말/주중
+  const tags: string[] = [];
+  if (isKDigital) tags.push('K-디지털');  // ← 추가
+  if (item.trainTarget) tags.push(item.trainTarget.replace(/[()]/g, ''));
+  if (item.wkendSe === '1') tags.push('주말');
+  else if (item.wkendSe === '3') tags.push('주중');
+  if (item.certificate) tags.push('자격증취득');
+
+   // K-디지털 트레이닝은 청년 대상 디지털 직무 훈련
+  const lifecycle = isKDigital ? 'youth' : 'all';
+  const category = isKDigital ? '고용·창업' : mapNcsToCategory(item.ncsCd);
+
+  return {
+    id: 'work24_' + sourceId,
+    tenantId: 'COMMON',
+    source: 'work24',
+    sourceId,
+    category,
+    lifecycle,
+    title: item.title,
+    org: item.subTitle || '직업훈련기관',
+    description: desc,
+    amountText: cost || null,
+    targetText: target,
+    targetAgeMin: null,
+    targetAgeMax: null,
+    region: extractRegion(item.address),
+    applyStart: null,
+    applyEnd: startDate, // 훈련 시작일 = 신청 마감 한계
+    applyUrl: item.titleLink || null,
+    tags: tags.join(','),
+    status: 'ACTIVE',
+  };
+}
