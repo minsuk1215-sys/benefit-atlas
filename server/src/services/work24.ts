@@ -14,7 +14,7 @@ export async function fetchTomorrowCardCourses(params: {
   crseTracseSe?: string; // 훈련유형 (C0061=내일배움카드 일반)
 }) {
   const queryParams: any = {
-    authKey: process.env.WORK24_KEY,
+    authKey: process.env.WORK24_RECRUIT_KEY || process.env.WORK24_KEY,
     returnType: 'JSON',
     outType: '1',  // 1=리스트, 2=상세
     pageNum: params.pageNum,
@@ -37,6 +37,39 @@ export async function fetchTomorrowCardCourses(params: {
     return data;
   } catch (err: any) {
     console.error('work24 훈련과정 호출 실패:', err.response?.status || err.message);
+    throw err;
+  }
+}
+
+// 채용정보 목록 조회
+const URL_RECRUIT = 'https://www.work24.go.kr/cm/openApi/call/wk/callOpenApiSvcInfo210L01.do';
+
+export async function fetchRecruitList(params: {
+  startPage: number;
+  display?: number;
+  region?: string;
+  occupation?: string;
+  returnType?: 'JSON' | 'XML';
+}) {
+  const queryParams: any = {
+    authKey: process.env.WORK24_KEY,
+    callTp: 'L',
+    returnType: params.returnType || 'JSON',  // JSON 먼저 시도
+    startPage: params.startPage,
+    display: params.display || 50,
+  };
+
+  if (params.region) queryParams.region = params.region;
+  if (params.occupation) queryParams.occupation = params.occupation;
+
+  try {
+    const { data } = await axios.get(URL_RECRUIT, {
+      params: queryParams,
+      timeout: 15000,
+    });
+    return data;
+  } catch (err: any) {
+    console.error('work24 채용정보 호출 실패:', err.response?.status || err.message);
     throw err;
   }
 }

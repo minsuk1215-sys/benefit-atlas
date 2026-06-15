@@ -106,6 +106,60 @@ app.get('/api/policies', async (req, res) => {
   }
 });
 
+// 정책 검색 API
+// 정책 검색 API
+app.get('/api/search', async (req, res) => {
+  let conn;
+  try {
+    const q = (req.query.q as string || '').trim();
+    const limit = Math.min(parseInt(req.query.limit as string) || 30, 100);
+
+    if (!q) {
+      return res.json({ ok: true, query: '', count: 0, data: [] });
+    }
+
+    conn = await getConnection();
+
+    // TITLE, TAGS, ORG에서 검색 (CLOB DESCRIPTION 제외 - 한글 인코딩 문제)
+    const result = await conn.execute(
+      `SELECT ID, TITLE, ORG, CATEGORY, LIFECYCLE,
+              TARGET_AGE_MIN, TARGET_AGE_MAX, APPLY_END, APPLY_URL, TAGS, REGION
+       FROM POLICY_MASTER
+       WHERE STATUS = 'ACTIVE'
+         AND (
+           UPPER(TITLE) LIKE UPPER(:q1)
+           OR UPPER(TAGS) LIKE UPPER(:q2)
+           OR UPPER(ORG) LIKE UPPER(:q3)
+         )
+       ORDER BY
+         CASE WHEN UPPER(TITLE) LIKE UPPER(:q4) THEN 1
+              WHEN UPPER(TAGS) LIKE UPPER(:q5) THEN 2
+              WHEN UPPER(ORG) LIKE UPPER(:q6) THEN 3
+              ELSE 4 END,
+         CREATED_AT DESC
+       FETCH FIRST :limit ROWS ONLY`,
+      {
+        q1: `%${q}%`, q2: `%${q}%`, q3: `%${q}%`,
+        q4: `%${q}%`, q5: `%${q}%`, q6: `%${q}%`,
+        limit,
+      },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+
+    res.json({
+      ok: true,
+      query: q,
+      count: result.rows!.length,
+      data: result.rows,
+    });
+  } catch (err: any) {
+    console.error('search error:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  } finally {
+    if (conn) await conn.close();
+  }
+});
+
 // 정책 상세
 app.get('/api/policies/:id', async (req, res) => {
   let conn;

@@ -12,6 +12,7 @@ import AdminLoginPage from './pages/AdminLoginPage';
 import AdminPoliciesPage from './pages/AdminPoliciesPage';
 import AdminPolicyFormPage from './pages/AdminPolicyFormPage';
 import AdminProtected from './components/AdminProtected';
+import SearchKeywordPage from './pages/SearchKeywordPage';
 
 function App() {
   return (
@@ -50,6 +51,7 @@ function PublicLayout() {
         <Route path="/jobs" element={<JobsPage />} />
         <Route path="/education" element={<EducationPage />} />
         <Route path="/schedule" element={<SchedulePage />} />
+        <Route path="/search-keyword" element={<SearchKeywordPage />} />
       </Routes>
     </>
   );
@@ -62,14 +64,14 @@ function Topbar() {
     return location.pathname.startsWith(path);
   };
 
-  const menus = [
-    { to: '/', label: '홈' },
-    { to: '/search', label: '내 혜택 찾기' },
-    { to: '/lifecycle', label: '생애주기' },
-    { to: '/jobs', label: '일자리' },
-    { to: '/education', label: '자녀교육' },
-  ];
-
+const menus = [
+  { to: '/', label: '홈' },
+  { to: '/search', label: '내 혜택 찾기' },
+  { to: '/search-keyword', label: '검색' },
+  { to: '/lifecycle', label: '생애주기' },
+  { to: '/jobs', label: '일자리' },
+  { to: '/education', label: '자녀교육' },
+];
   return (
     <nav style={navStyle}>
       <div style={navInnerStyle}>
