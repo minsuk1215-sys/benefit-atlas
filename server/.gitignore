@@ -3,3 +3,7 @@ node_modules/
 .env.local
 *.log
 dist/
+# Oracle Cloud Wallet (절대 커밋 금지)
+wallet_cloud/
+*.zip
+Wallet_*.zip
